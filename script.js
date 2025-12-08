@@ -9,6 +9,7 @@
   // Nav toggle (hamburger)
   const navToggle = $('#nav-toggle');
   const primaryNav = $('#primary-nav');
+  const header = $('.site-header');
 
   navToggle && navToggle.addEventListener('click', () => {
     const expanded = navToggle.getAttribute('aria-expanded') === 'true';
@@ -17,7 +18,16 @@
     navToggle.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
   });
 
-  // Close nav on outside click or Escape
+  // Header shadow on scroll + close nav on outside click
+  document.addEventListener('scroll', () => {
+    if (!header) return;
+    if (window.scrollY > 10) {
+      header.classList.add('scrolled');
+    } else {
+      header.classList.remove('scrolled');
+    }
+  });
+
   document.addEventListener('click', (e) => {
     if (!primaryNav || !navToggle) return;
     if (primaryNav.contains(e.target) || navToggle.contains(e.target)) return;
@@ -27,6 +37,7 @@
       navToggle.setAttribute('aria-label', 'Open navigation');
     }
   });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (primaryNav && window.innerWidth < 768) {
@@ -46,14 +57,30 @@
       const target = document.getElementById(targetId);
       if (target) {
         e.preventDefault();
+        const top = target.getBoundingClientRect().top + window.scrollY - 70;
         if (prefersReduced) {
-          target.scrollIntoView();
+          window.scrollTo(0, top);
         } else {
-          window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 60, behavior: 'smooth' });
+          window.scrollTo({ top, behavior: 'smooth' });
         }
       }
     });
   });
+
+  // "Compare Options" button scroll
+  const compareScrollBtn = $('#compare-scroll');
+  if (compareScrollBtn) {
+    compareScrollBtn.addEventListener('click', () => {
+      const target = $('#compare');
+      if (!target) return;
+      const top = target.getBoundingClientRect().top + window.scrollY - 70;
+      if (prefersReduced) {
+        window.scrollTo(0, top);
+      } else {
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    });
+  }
 
   // Compare toggle - show/hide metrics column values
   const toggleMetrics = $('#toggle-metrics');
@@ -91,7 +118,7 @@
     }
   }
 
-  // Company modals (load content from optional companies JSON if present)
+  // Company modals
   const companyBtns = $$('.company-btn');
   const modal = $('#company-modal');
   const modalBody = $('#company-modal-body');
@@ -150,20 +177,19 @@
       <p><strong>Typical equipment:</strong> ${data.equipment}</p>
       <p><strong>Pros:</strong> ${data.pros}</p>
       <p><strong>Cons:</strong> ${data.cons}</p>
-      <p><a href="#" class="learn-more" data-company="${key}">Learn more (external)</a></p>
     `;
     showModal();
   }
 
   // Modal open/close
   function showModal(){
+    if (!modal) return;
     modal.setAttribute('aria-hidden','false');
-    modal.querySelector('.modal-panel').focus();
-    // attach close handlers
+    const panel = modal.querySelector('.modal-panel');
+    panel && panel.focus();
     modal.querySelectorAll('[data-close]').forEach(el => {
       el.addEventListener('click', closeModal);
     });
-    // trap focus simple:
     document.body.style.overflow = 'hidden';
   }
   function closeModal(){
@@ -183,7 +209,7 @@
     btn.addEventListener('focus', () => lastActiveBtn = btn);
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
+    if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') {
       closeModal();
       lastActiveBtn && lastActiveBtn.focus();
     }
@@ -194,7 +220,6 @@
     const lm = e.target.closest('.learn-more');
     if (lm) {
       e.preventDefault();
-      // In a real site, link to authoritative sources.
       alert('Open provider site to learn more (placeholder).');
     }
   });
@@ -205,5 +230,59 @@
       $$('.metrics').forEach(cell => cell.style.visibility = 'hidden');
     }
   });
+
+  /* ---------- Scroll-based reveal animations ---------- */
+  if (!prefersReduced && 'IntersectionObserver' in window) {
+    const revealEls = [
+      ...$$('.hero-content'),
+      ...$$('.hero-image'),
+      ...$$('.section'),
+      ...$$('.card'),
+      ...$$('.company-btn'),
+      ...$$('.faq-item')
+    ];
+
+    revealEls.forEach(el => el.classList.add('reveal'));
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal--visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },{
+      threshold:0.15
+    });
+
+    revealEls.forEach(el => observer.observe(el));
+  }
+
+  /* ---------- Scroll-to-top button (created by JS) ---------- */
+  const scrollBtn = document.createElement('button');
+  scrollBtn.id = 'scroll-top';
+  scrollBtn.className = 'scroll-top';
+  scrollBtn.type = 'button';
+  scrollBtn.setAttribute('aria-label','Scroll back to top');
+  scrollBtn.innerHTML = '↑';
+  document.body.appendChild(scrollBtn);
+
+  function updateScrollButton(){
+    if (window.scrollY > 260) {
+      scrollBtn.classList.add('scroll-top--visible');
+    } else {
+      scrollBtn.classList.remove('scroll-top--visible');
+    }
+  }
+
+  scrollBtn.addEventListener('click', () => {
+    if (prefersReduced) {
+      window.scrollTo(0,0);
+    } else {
+      window.scrollTo({ top:0, behavior:'smooth' });
+    }
+  });
+
+  document.addEventListener('scroll', updateScrollButton);
 
 })();
